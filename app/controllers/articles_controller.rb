@@ -9,7 +9,25 @@ class ArticlesController < ApplicationController
   # GET /articles
   def index
     # TODO: allow filter and pagination
-    @articles = Article.all
+
+    # filtering based on search params
+    search_terms = []
+    search_conditions = {}.to_h
+    text_based_attrs = [:title, :body]
+    search_params = params.permit(text_based_attrs + [:status]).to_h
+
+    if Article::VALID_STATUSES.include?(search_params[:status])
+      search_conditions[:status] = search_params[:status]
+      search_terms << "status = :status"
+    end
+
+    search_params.slice(*text_based_attrs).each do |search_term, search_val|
+      search_conditions[search_term.to_sym] = "%#{search_val}%"
+      search_terms << "#{search_term} LIKE :#{search_term}"
+    end
+
+    search_basis = search_conditions.empty? ? Article : Article.where(search_terms.join(" AND "), search_conditions)
+    @articles = search_basis.all
     render json: @articles
   end
 
