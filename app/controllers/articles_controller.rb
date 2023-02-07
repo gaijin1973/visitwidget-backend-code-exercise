@@ -31,7 +31,7 @@ class ArticlesController < ApplicationController
 
   # PUT /articles/:id
   def update
-    if @article.update_attributes(article_params)
+    if @article.update(article_params)
       render json: @article
     else
       render json: rendered_error("update", params[:id], @article.errors.full_messages),

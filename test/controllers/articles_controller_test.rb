@@ -147,6 +147,68 @@ class ArticlesControllerTest < ActionDispatch::IntegrationTest
 
 # PUT /articles/
 
+  test "should update article" do
+    first_article = Article.first
+    original_body = first_article.body
+    test_body = "Body of article #{Time.current}"
+    assert_not_equal test_body, original_body
+    assert_no_difference("Article.count") do
+      put article_url(first_article),
+        params: {
+          article: {
+            body: test_body,
+            title: first_article.title,
+            status: first_article.status
+          }
+        },
+        headers: AUTH_HEADER,
+        as: :json
+    end
+    assert_response :success
+    assert_equal JSON_CONTENT_TYPE, @response.content_type
+    article_details = json_to_hwia(@response.body)
+    assert_equal 2, articles.size
+    assert_equal test_body, article_details[:body]
+    assert_equal test_body, Article.first.body
+  end
+
+  test "should fail update for an invalid article ID" do
+    first_article = Article.first
+    test_body = "Body of article #{Time.current}"
+    put article_url(first_article.id-1000),
+      params: {
+        article: {
+          body: test_body,
+          title: first_article.title,
+          status: first_article.status
+        }
+      },
+      headers: AUTH_HEADER,
+      as: :json
+    assert_response :not_found
+    assert_equal TEXT_CONTENT_TYPE, @response.content_type
+    assert_match "404 Not Found", @response.body
+  end
+
+  test "should prevent unauthenticated article updates" do
+    first_article = Article.first
+    test_body = "Body of article #{Time.current}"
+    assert_no_difference("Article.count") do
+      put article_url(first_article),
+        params: {
+          article: {
+            body: test_body,
+            title: first_article.title,
+            status: first_article.status
+          }
+        },
+        as: :json
+    end
+    assert_response :unauthorized
+    assert_equal HTML_CONTENT_TYPE, @response.content_type
+    assert_match "HTTP Basic: Access denied.", @response.body
+  end
+
 # DELETE /articles/
 
   test "should delete article" do
