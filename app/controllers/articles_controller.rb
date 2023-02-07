@@ -8,25 +8,41 @@ class ArticlesController < ApplicationController
 
   # GET /articles
   def index
-    # TODO: allow filter and pagination
-
     # filtering based on search params
     search_terms = []
     search_conditions = {}.to_h
-    text_based_attrs = [:title, :body]
-    search_params = params.permit(text_based_attrs + [:status]).to_h
+    text_match_attrs = [:title, :body]
+    paging_attrs = [:offset, :limit]
+    search_params = params.permit(text_match_attrs + [:status] + paging_attrs).to_h
 
     if Article::VALID_STATUSES.include?(search_params[:status])
       search_conditions[:status] = search_params[:status]
       search_terms << "status = :status"
     end
 
-    search_params.slice(*text_based_attrs).each do |search_term, search_val|
+    search_params.slice(*text_match_attrs).each do |search_term, search_val|
       search_conditions[search_term.to_sym] = "%#{search_val}%"
       search_terms << "#{search_term} LIKE :#{search_term}"
     end
 
     search_basis = search_conditions.empty? ? Article : Article.where(search_terms.join(" AND "), search_conditions)
+
+    # pagination
+    if search_params[:offset].to_i > 0
+      search_basis = search_basis.offset(search_params[:offset].to_i)
+    end
+
+    max_page_limit = 100
+    default_page_limit = 10
+    requested_page_limit = search_params[:limit]
+    puts requested_page_limit
+    if (0...max_page_limit) === requested_page_limit.to_i
+      applied_page_limit = requested_page_limit.to_i
+    else
+      applied_page_limit = default_page_limit
+    end
+    search_basis = search_basis.limit(applied_page_limit)
+
     @articles = search_basis.all
     render json: @articles
   end
