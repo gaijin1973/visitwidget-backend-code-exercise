@@ -1,4 +1,5 @@
-class ApplicationController < ActionController::Base
+class ApplicationController < ActionController::API
+  include ActionController::HttpAuthentication::Basic::ControllerMethods
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
   private

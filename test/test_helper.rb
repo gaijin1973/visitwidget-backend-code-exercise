@@ -11,3 +11,13 @@ class ActiveSupport::TestCase
 
   # Add more helper methods to be used by all tests here...
 end
+
+module GeneralUtilitiesHelper
+  def json_to_hwia(json_string)
+    JSON.parse(json_string).with_indifferent_access
+  end
+end
+
+class ActionDispatch::IntegrationTest
+  include GeneralUtilitiesHelper
+end

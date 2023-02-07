@@ -1,6 +1,9 @@
 class ArticlesController < ApplicationController
+  # Unnecessary if exclusively JSON-based API app (skip forgery protection)
+  include ActionController::RequestForgeryProtection
   http_basic_authenticate_with name: "test", password: "secret", except: [:index, :show]
-  protect_from_forgery unless: -> { request.format.json? }
+  # Checking CONTENT-TYPE header may be more secure than checking format for CSRF
+  protect_from_forgery unless: -> { request.content_type =~ /json/ }
   before_action :retrieve_article, except: [:index, :create, :import]
 
   # GET /articles
@@ -21,7 +24,8 @@ class ArticlesController < ApplicationController
     if @article.save
       render json: @article
     else
-      render rendered_error("create", nil, @article.errors.full_messages)
+      render json: rendered_error("create", nil, @article.errors.full_messages),
+        status: :bad_request
     end
   end
 
@@ -30,16 +34,18 @@ class ArticlesController < ApplicationController
     if @article.update_attributes(article_params)
       render json: @article
     else
-      render rendered_error("update", params[:id], @article.errors.full_messages)
+      render json: rendered_error("update", params[:id], @article.errors.full_messages),
+        status: :bad_request
     end
   end
 
   # DELETE /articles
-  def delete
+  def destroy
     if @article.destroy
-      render message: { error: "Article #{params[:id]} successfully deleted." }
+      render json: { message: "Article #{params[:id]} successfully destroyed." }
     else
-      render rendered_error("delete", params[:id], @article.errors.full_messages)
+      render json: rendered_error("delete", params[:id], @article.errors.full_messages),
+        status: :bad_request
     end
   end
 
@@ -60,7 +66,9 @@ class ArticlesController < ApplicationController
     @article = Article.find(params[:id])
   end
 
-  def rendered_error(action, id=nil, msgs=[], status=400)
-    {error: { error: "Unable to #{action} Article#{' ' if id}#{id}. Error#{'s' if msgs.size > 1}: #{msgs.join(', ')}" }, status: status}
+  def rendered_error(action, id=nil, msgs=[])
+    {
+      error: "Unable to #{action} Article#{' ' if id}#{id}. Error#{'s' if msgs.size > 1}: #{msgs.join(', ')}."
+    }
   end
 end
