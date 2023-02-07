@@ -35,7 +35,6 @@ class ArticlesController < ApplicationController
     max_page_limit = 100
     default_page_limit = 10
     requested_page_limit = search_params[:limit]
-    puts requested_page_limit
     if (0...max_page_limit) === requested_page_limit.to_i
       applied_page_limit = requested_page_limit.to_i
     else
@@ -85,7 +84,20 @@ class ArticlesController < ApplicationController
 
   # POST /articles/import
   def import
-    # TODO: create command that allows for importing articles with comments
+    import_params = params.permit(articles: [:title, :body, :status, comments: [:commenter, :body, :status]]).to_h
+    # import_params = params.require(articles: [:title, :body, :status]).permit(articles: []).to_h#comments: []).require(:commenter, :body, :status).to_h
+    results = []
+    import_params[:articles].each do |article_attrs|
+      comments = article_attrs.delete(:comments)
+      article_attrs[:comments_attributes] = comments
+      article = Article.new(article_attrs)
+      if article.save
+        results << build_import_response_item(article_attrs, article, :success)
+      else
+        results << build_import_response_item(article_attrs, article, :fail)
+      end
+    end
+    render json: results.to_json
   end
 
   # TODO: add update and delete methods
@@ -105,4 +117,17 @@ class ArticlesController < ApplicationController
       error: "Unable to #{action} Article#{' ' if id}#{id}. Error#{'s' if msgs.size > 1}: #{msgs.join(', ')}."
     }
   end
+
+  def build_import_response_item(article_attrs, article, import_succeeded)
+    response_item = {submitted_attrs: article_attrs, status: import_succeeded}
+    case import_succeeded
+    when :success
+      response_item[:article_url] = article_url(article)
+      response_item[:import_time] = article.created_at
+    when :fail
+      response_item[:errors] = article.errors.full_messages
+    end
+    response_item
+  end
+
 end

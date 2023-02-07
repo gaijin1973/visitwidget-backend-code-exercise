@@ -246,4 +246,13 @@ class ArticlesControllerTest < ActionDispatch::IntegrationTest
     assert_match "HTTP Basic: Access denied.", @response.body
   end
 
+# POST /articles/import
+
+  test "should import articles" do
+    comment_1 = {commenter: "Jonathan", body: "Here's what I think", status: "public"}
+    post import_articles_url,
+      params: { articles: [{title: "Goodnight Moon", body: "Howdy lunar neighbor", foo: "bar", status: "public", comments: [comment_1]}] },
+      headers: AUTH_HEADER,
+      as: :json
+  end
 end
