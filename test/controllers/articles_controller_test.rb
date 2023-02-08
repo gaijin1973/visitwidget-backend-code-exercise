@@ -250,8 +250,12 @@ class ArticlesControllerTest < ActionDispatch::IntegrationTest
 
   test "should import articles" do
     comment_1 = {commenter: "Jonathan", body: "Here's what I think", status: "public"}
+    comment_2 = {commenter: "Annie", body: "Me too!", status: "private"}
+    comment_3 = {commenter: "Tesla", body: "Meh", status: "archived"}
+    article_1 = {title: "Goodnight Moon", body: "Howdy lunar neighbor", foo: "bar", status: "public", comments: [comment_1, comment_2]}
+    article_2 = {title: "Green Eggs and Ham", body: "Sam I am, that Sam I am", foo: "bar", status: "public", comments: [comment_3]}
     post import_articles_url,
-      params: { articles: [{title: "Goodnight Moon", body: "Howdy lunar neighbor", foo: "bar", status: "public", comments: [comment_1]}] },
+      params: { articles: [article_1, article_2] },
       headers: AUTH_HEADER,
       as: :json
   end

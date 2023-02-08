@@ -84,17 +84,17 @@ class ArticlesController < ApplicationController
 
   # POST /articles/import
   def import
-    import_params = params.permit(articles: [:title, :body, :status, comments: [:commenter, :body, :status]]).to_h
+    import_params = params.permit(articles: [:title, :body, :status, [comments: [:commenter, :body, :status] ]]).to_h
     # import_params = params.require(articles: [:title, :body, :status]).permit(articles: []).to_h#comments: []).require(:commenter, :body, :status).to_h
     results = []
-    import_params[:articles].each do |article_attrs|
+    import_params[:articles].each_with_index do |article_attrs, idx|
       comments = article_attrs.delete(:comments)
       article_attrs[:comments_attributes] = comments
       article = Article.new(article_attrs)
       if article.save
-        results << build_import_response_item(article_attrs, article, :success)
+        results << build_import_response_item(idx, article_attrs, article, :success)
       else
-        results << build_import_response_item(article_attrs, article, :fail)
+        results << build_import_response_item(idx, article_attrs, article, :fail)
       end
     end
     render json: results.to_json
@@ -118,15 +118,17 @@ class ArticlesController < ApplicationController
     }
   end
 
-  def build_import_response_item(article_attrs, article, import_succeeded)
-    response_item = {submitted_attrs: article_attrs, status: import_succeeded}
+  def build_import_response_item(idx, article_attrs, article, import_succeeded)
+    response_item = {import_ordinal: idx+1, status: import_succeeded}
     case import_succeeded
     when :success
-      response_item[:article_url] = article_url(article)
       response_item[:import_time] = article.created_at
+      response_item[:article_url] = article_url(article)
+      response_item[:comment_urls] = article.comments.map{|c| article_comment_url(article, c)}
     when :fail
       response_item[:errors] = article.errors.full_messages
     end
+    response_item[:submitted_attrs] = article_attrs
     response_item
   end
 
